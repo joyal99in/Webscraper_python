@@ -19,15 +19,20 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libxss1 \
     libxtst6 \
-    xdg-utils
+    xdg-utils \
+    libnss3 \          # New
+    libgdk-pixbuf2.0-0 \  # New
+    libgtk-3-0 \       # New
+    libpangocairo-1.0-0 \  # New
+    libcairo2          # New
 
-# Install Chrome 132.x
+# Install Chrome
 RUN wget -q https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_132.0.6834.160-1_amd64.deb \
-    && apt-get install -y ./google-chrome-stable_132.0.6834.160-1_amd64.deb \
+    && apt-get install -y ./google-chrome-stable_*.deb \
     && rm google-chrome-stable_*.deb \
     && apt-get clean
 
-# Install matching Chromedriver 132.0.6834.160
+# Install Chromedriver
 RUN wget -q https://chromedriver.storage.googleapis.com/132.0.6834.160/chromedriver_linux64.zip \
     && unzip chromedriver_linux64.zip \
     && mv chromedriver /usr/bin/chromedriver \
