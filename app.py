@@ -82,7 +82,7 @@ if not st.session_state.authenticated:
 
 def scrape_bigbasket(url):
     chrome_options = Options()
-    chrome_options.binary_location = "/usr/bin/google-chrome" 
+    chrome_options.binary_location = "/usr/bin/google-chrome-stable"  
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -93,7 +93,7 @@ def scrape_bigbasket(url):
     chrome_options.add_argument("--window-size=1920x1080")
 
     driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
+        service=Service(executable_path="/usr/bin/chromedriver"),  
         options=chrome_options
     )
 

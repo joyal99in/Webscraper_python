@@ -1,41 +1,38 @@
 FROM python:3.9-slim
 
-# Install Chrome and dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
+    unzip \
     fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libexpat1 \
-    libgbm1 \
-    libgcc1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
+    libgl1 \
     libx11-6 \
     libxcb1 \
     libxcomposite1 \
+    libxcursor1 \
     libxdamage1 \
     libxext6 \
     libxfixes3 \
+    libxi6 \
     libxrandr2 \
-    xdg-utils \
-    --no-install-recommends
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    xdg-utils
 
-# Install Chrome
-RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
-    && rm google-chrome-stable_current_amd64.deb \
-    && rm -rf /var/lib/apt/lists/*
+# Install Chrome 132.x
+RUN wget -q https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_132.0.6834.160-1_amd64.deb \
+    && apt-get install -y ./google-chrome-stable_132.0.6834.160-1_amd64.deb \
+    && rm google-chrome-stable_*.deb \
+    && apt-get clean
+
+# Install matching Chromedriver 132.0.6834.160
+RUN wget -q https://chromedriver.storage.googleapis.com/132.0.6834.160/chromedriver_linux64.zip \
+    && unzip chromedriver_linux64.zip \
+    && mv chromedriver /usr/bin/chromedriver \
+    && chmod +x /usr/bin/chromedriver \
+    && rm chromedriver_linux64.zip
 
 WORKDIR /app
 
