@@ -8,22 +8,26 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
+    unzip \
     --no-install-recommends
 
 # Install Google Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
     && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ChromeDriver
+# Install ChromeDriver using the new mechanism
 RUN CHROME_VERSION=$(google-chrome --version | grep -oP 'Google Chrome \K\d+') \
-    && CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}) \
-    && wget -q https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip \
+    && CHROMEDRIVER_VERSION=$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/latest-patch-versions-per-build-with-downloads.json | \
+                              grep -oP "(?<=\"buildNumber\": \"${CHROME_VERSION}\", \"downloads\": {\"chromedriver\": \\[\\{\"version\": \")[^\"]+") \
+    && CHROMEDRIVER_URL=$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/latest-patch-versions-per-build-with-downloads.json | \
+                          grep -oP "(?<=\"version\": \"${CHROMEDRIVER_VERSION}\", \"platform\": \"linux64\", \"url\": \")[^\"]+") \
+    && wget -q "$CHROMEDRIVER_URL" -O chromedriver_linux64.zip \
     && unzip chromedriver_linux64.zip \
-    && mv chromedriver /usr/local/bin/chromedriver \
+    && mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
     && chmod +x /usr/local/bin/chromedriver \
-    && rm chromedriver_linux64.zip
+    && rm -rf chromedriver_linux64.zip chromedriver-linux64
 
 # Install Python dependencies
 COPY requirements.txt .
