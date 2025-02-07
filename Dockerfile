@@ -1,46 +1,51 @@
+# Use official Python image
 FROM python:3.9-slim
 
-# System dependencies
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    unzip \
-    fonts-liberation \
-    libgl1 \
-    libx11-6 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    xdg-utils \
-    libnss3 \
-    libgdk-pixbuf2.0-0 \
-    libgtk-3-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
-    # Add new dependencies
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev \
     curl \
-    ca-certificates
+    unzip \
+    wget \
+    xvfb \
+    libxi6 \
+    libgconf-2-4 \
+    default-jdk \
+    && apt-get clean
 
-# Install Google Chrome (updated method)
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
-    && apt-get update -y \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable
 
+# Install ChromeDriver
+RUN CHROME_DRIVER_VERSION=`curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE` \
+    && wget -q https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip \
+    && unzip chromedriver_linux64.zip \
+    && mv chromedriver /usr/local/bin/ \
+    && chmod +x /usr/local/bin/chromedriver \
+    && rm chromedriver_linux64.zip
+
+# Create working directory
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy application files
+COPY . /app/
 
-COPY . .
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install -r requirements.txt
 
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Expose the Streamlit default port
+EXPOSE 8501
+
+# Command to run the Streamlit app
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false"]
