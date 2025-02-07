@@ -4,3 +4,5 @@ pandas
 selenium
 webdriver-manager
 matplotlib
+pyvirtualdisplay
+
