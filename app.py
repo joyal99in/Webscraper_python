@@ -84,10 +84,7 @@ def scrape_bigbasket(url):
     chrome_options.add_experimental_option("useAutomationExtension", False)
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     chrome_options.add_argument("--window-size=1920x1080")
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=chrome_options
-    )
+    driver = webdriver.Chrome(options=chrome_options)
     try:
         driver.get(url)
         WebDriverWait(driver, 15).until(
