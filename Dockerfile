@@ -36,4 +36,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set the default command to run the application
-CMD ["streamlit", "run", "app.py"]
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "$PORT"]
+
