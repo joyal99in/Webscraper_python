@@ -1,43 +1,39 @@
-# Base image
-FROM python:3.9-slim
+# Use a base image with Python
+FROM python:3.9
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
-# Install system dependencies
+# Install required dependencies
 RUN apt-get update && apt-get install -y \
     wget \
-    gnupg \
     unzip \
-    --no-install-recommends
+    curl \
+    gnupg
 
 # Install Google Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+RUN wget -q -O google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    dpkg -i google-chrome.deb || apt-get -fy install && \
+    rm google-chrome.deb && \
+    google-chrome --version
 
-# Install ChromeDriver using the new mechanism
-RUN CHROME_VERSION=$(google-chrome --version | grep -oP 'Google Chrome \K\d+') \
-    && CHROMEDRIVER_VERSION=$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/latest-patch-versions-per-build-with-downloads.json | \
-                              grep -oP "(?<=\"buildNumber\": \"${CHROME_VERSION}\", \"downloads\": {\"chromedriver\": \\[\\{\"version\": \")[^\"]+") \
-    && CHROMEDRIVER_URL=$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/latest-patch-versions-per-build-with-downloads.json | \
-                          grep -oP "(?<=\"version\": \"${CHROMEDRIVER_VERSION}\", \"platform\": \"linux64\", \"url\": \")[^\"]+") \
-    && wget -q "$CHROMEDRIVER_URL" -O chromedriver_linux64.zip \
-    && unzip chromedriver_linux64.zip \
-    && mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
-    && chmod +x /usr/local/bin/chromedriver \
-    && rm -rf chromedriver_linux64.zip chromedriver-linux64
+# Get the correct ChromeDriver version and install it
+RUN CHROME_VERSION=$(google-chrome --version | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+') && \
+    echo "Detected Chrome version: $CHROME_VERSION" && \
+    CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") && \
+    echo "Downloading ChromeDriver version: $CHROMEDRIVER_VERSION" && \
+    wget -q "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" -O chromedriver_linux64.zip && \
+    unzip chromedriver_linux64.zip && \
+    mv chromedriver /usr/local/bin/chromedriver && \
+    chmod +x /usr/local/bin/chromedriver && \
+    rm -rf chromedriver_linux64.zip
 
-# Install Python dependencies
+# Install required Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app files
+# Copy project files
 COPY . .
 
-# Expose Streamlit port
-EXPOSE 8501
-
-# Command to run the app
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Set the default command to run the application
+CMD ["streamlit", "run", "app.py"]
