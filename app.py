@@ -2,17 +2,10 @@ import streamlit as st
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-import time
-from webdriver_manager.chrome import ChromeDriverManager
 import matplotlib.pyplot as plt
 import json
 import os
+import requests
 
 # User data storage file
 USER_DATA_FILE = "users.json"
@@ -74,58 +67,46 @@ def handle_auth():
 if not st.session_state.authenticated:
     handle_auth()
     st.stop()
+    
 def scrape_bigbasket(url):
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option("useAutomationExtension", False)
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    chrome_options.add_argument("--window-size=1920x1080")
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=chrome_options
-    )
-    try:
-        driver.get(url)
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "SKUDeck___StyledDiv-sc-1e5d9gk-0"))
-        )
-        # Improved scrolling logic
-        last_height = driver.execute_script("return document.body.scrollHeight")
-        scroll_attempts = 0
-        max_attempts = 5
-        while scroll_attempts < max_attempts:
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
-            new_height = driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                break
-            last_height = new_height
-            scroll_attempts += 1
-        # Wait for products to load after scrolling
-        time.sleep(3)
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        
+    # ✅ 2. Send an HTTP GET request via ScraperAPI
+    api_key = os.getenv("SCRAPER_API_KEY")  # Fetch the API key from the environment
+    scraper_url = f"https://api.scraperapi.com?api_key={api_key}&url={url}"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive"
+    }
+
+    response = requests.get(scraper_url, headers=headers)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
         product_containers = soup.find_all('div', class_='SKUDeck___StyledDiv-sc-1e5d9gk-0')
+
         if not product_containers:
-            raise Exception("No products found - check if website is blocking requests")
+            raise Exception("No products found - check if website is blocking requests or class names are incorrect")
+
         data = []
         for product in product_containers:
-            # ... [Keep the existing data extraction logic] ...
             name_tag = product.find('h3', class_='block m-0 line-clamp-2 font-regular text-base leading-sm text-darkOnyx-800 pt-0.5 h-full')
             weight_tag = product.find('span', string=re.compile(r'[\d.]+\s*(kg|g)', re.IGNORECASE))
             price_tag = product.find('span', class_='Label-sc-15v1nk5-0 Pricing___StyledLabel-sc-pldi2d-1 gJxZPQ AypOi')
             mrp_tag = product.find('span', class_='Label-sc-15v1nk5-0 Pricing___StyledLabel2-sc-pldi2d-2 gJxZPQ hsCgvu')
+
             data.append((
                 name_tag.text.strip() if name_tag else None,
                 weight_tag.text.strip() if weight_tag else None,
                 price_tag.text.strip() if price_tag else None,
                 mrp_tag.text.strip() if mrp_tag else None
             ))
+
         df = pd.DataFrame(data, columns=['Name', 'Quantity(kg)', 'Price', 'MRP'])
+        
+        # Data cleaning
         def convert_weight(value):
             if pd.isna(value):
                 return None
@@ -134,6 +115,7 @@ def scrape_bigbasket(url):
                 num = float(match.group(1))
                 return num / 1000 if match.group(2).lower() == "g" else num
             return None
+
         df['Quantity(kg)'] = df['Quantity(kg)'].apply(convert_weight)
         df = df.dropna(subset=['Quantity(kg)', 'Price'])
         df["Price"] = df["Price"].apply(lambda x: float(x.replace("₹", "")) if isinstance(x, str) else None)
@@ -141,15 +123,16 @@ def scrape_bigbasket(url):
         df['Price/kg'] = (df['Price'] / df['Quantity(kg)']).fillna(0).astype(int)
         df['MRP/kg'] = (df['MRP'] / df['Quantity(kg)']).fillna(0).astype(int)
         df.drop(columns=['Price', 'MRP', 'Quantity(kg)'], inplace=True)
-        df.reset_index(drop=True,inplace=True)
+        df.reset_index(drop=True, inplace=True)
         df = df.drop_duplicates(subset="Name", keep="first")
+
+        if df.empty:
+            raise Exception("No valid product data found")
+
         return df
-    
-    except Exception as e:
-        driver.save_screenshot('error_screenshot.png')
-        raise e
-    finally:
-        driver.quit()
+    else:
+        raise Exception(f"Failed to retrieve page. Status code: {response.status_code}")
+
 
 # Main app interface
 st.title("🛒 BigBasket Web Scraper")

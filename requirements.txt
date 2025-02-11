@@ -1,8 +1,5 @@
 streamlit
 beautifulsoup4
 pandas
-selenium
-webdriver-manager
 matplotlib
-
-
+requests
