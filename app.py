@@ -136,7 +136,7 @@ def scrape_bigbasket(url):
 
 # Main app interface
 st.title("🛒 BigBasket Web Scraper")
-st.markdown(f"Welcome, {st.session_state.current_user}!")
+st.markdown(f"Welcome, {st.session_state.current_user}! 👋")
 # Logout button
 if st.sidebar.button("Logout"):
     st.session_state.authenticated = False
@@ -145,6 +145,13 @@ if st.sidebar.button("Logout"):
 # Original scraping interface
 st.markdown("Enter a **BigBasket URL** below to scrape product details.")
 url = st.text_input("Enter BigBasket URL:")
+    # Warning message with custom styling
+st.markdown(
+        """<div class="warning">
+            ⚠️ <strong>Important:</strong> Only input links to categories where products are measured in grams or kilograms.
+           </div>""", 
+        unsafe_allow_html=True
+    )
 if st.button("Scrape Data"):
     if url:
         with st.spinner("Scraping data... Please wait."):
@@ -155,10 +162,10 @@ if st.button("Scrape Data"):
                 st.download_button("📥 Download CSV", df.to_csv(index=False), "bigbasket_data.csv", "text/csv")
                 # Tabs for Analysis
                 tab1, tab2, tab3, tab4 = st.tabs([
-                    "Top 10 Expensive Items",
-                    "Least 10 Expensive Items",
-                    "Top 5 Max Discount",
-                    "Top 5 Least Discount"
+                        "💎 Top Premium Items",
+                        "💰 Best Value Picks",
+                        "🎉 Maximum Discounts",
+                        "⌛ Minimum Discounts"
                 ])
                 with tab1:
                     st.subheader("Top 10 Most Expensive Items")
